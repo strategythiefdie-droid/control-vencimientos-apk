@@ -107,15 +107,15 @@ jobs:
               if marker not in text:
                   raise SystemExit("No se encontró el bloque pluginManagement; no se modificó el archivo.")
 
-              patch = """  resolutionStrategy {
-                eachPlugin {
-                  if (requested.id.id == "com.google.devtools.ksp") {
-                    useModule("com.google.devtools.ksp:symbol-processing-gradle-plugin:@KSP_VERSION@")
-                  }
-                }
-              }
-
-          """.replace("@KSP_VERSION@", "$" + "{requested.version}")
+              patch = (
+                  "  resolutionStrategy {\n"
+                  "    eachPlugin {\n"
+                  "      if (requested.id.id == \"com.google.devtools.ksp\") {\n"
+                  "        useModule(\"com.google.devtools.ksp:symbol-processing-gradle-plugin:@KSP_VERSION@\")\n"
+                  "      }\n"
+                  "    }\n"
+                  "  }\n\n"
+              ).replace("@KSP_VERSION@", "$" + "{requested.version}")
 
               text = text.replace(marker, marker + patch, 1)
               settings.write_text(text, encoding="utf-8")
