@@ -32,10 +32,7 @@ jobs:
 
       - name: Instalar SDK requerido
         run: |
-          sdkmanager --install \\
-            "platforms;android-36.1" \\
-            "build-tools;36.0.0" \\
-            "platform-tools"
+          sdkmanager --install "platforms;android-36.1" "build-tools;36.0.0" "platform-tools"
 
       - name: Preparar Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -72,7 +69,10 @@ jobs:
           mkdir -p project
           unzip -oq "$PROJECT_ZIP" -d project
 
-          SETTINGS_FILE="$(find project -type f \\( -name settings.gradle -o -name settings.gradle.kts \\) -print -quit)"
+          SETTINGS_FILE="$(find project -type f -name 'settings.gradle.kts' -print -quit)"
+          if [ -z "$SETTINGS_FILE" ]; then
+            SETTINGS_FILE="$(find project -type f -name 'settings.gradle' -print -quit)"
+          fi
 
           if [ -z "$SETTINGS_FILE" ]; then
             echo "ERROR: No se encontró settings.gradle ni settings.gradle.kts."
@@ -103,21 +103,21 @@ jobs:
           if rule in text:
               print("La resolución directa de KSP ya está configurada.")
           else:
-              marker = "pluginManagement {"
+              marker = "pluginManagement {\n"
               if marker not in text:
                   raise SystemExit("No se encontró el bloque pluginManagement; no se modificó el archivo.")
 
-              patch = """pluginManagement {
-            resolutionStrategy {
-              eachPlugin {
-                if (requested.id.id == "com.google.devtools.ksp") {
-                  useModule("com.google.devtools.ksp:symbol-processing-gradle-plugin:${requested.version}")
+              patch = """  resolutionStrategy {
+                eachPlugin {
+                  if (requested.id.id == "com.google.devtools.ksp") {
+                    useModule("com.google.devtools.ksp:symbol-processing-gradle-plugin:@KSP_VERSION@")
+                  }
                 }
               }
-            }
-          """
 
-              text = text.replace(marker, patch, 1)
+          """.replace("@KSP_VERSION@", "$" + "{requested.version}")
+
+              text = text.replace(marker, marker + patch, 1)
               settings.write_text(text, encoding="utf-8")
               print("Se configuró la resolución directa de KSP.")
 
@@ -127,16 +127,7 @@ jobs:
 
       - name: Generar clave de firma de prueba
         run: |
-          keytool -genkeypair \\
-            -v \\
-            -keystore "$PROJECT_ROOT/debug.keystore" \\
-            -storepass android \\
-            -alias androiddebugkey \\
-            -keypass android \\
-            -keyalg RSA \\
-            -keysize 2048 \\
-            -validity 10000 \\
-            -dname "CN=Android Debug,O=Android,C=US"
+          keytool -genkeypair -v -keystore "$PROJECT_ROOT/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Compilar APK de prueba
         run: |
